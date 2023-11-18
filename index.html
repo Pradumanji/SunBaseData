@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Management System</title>
+</head>
+<body>
+
+<!-- Login Screen -->
+<section id="loginScreen">
+    <h2>Login</h2>
+    <form id="loginForm">
+        <label for="login_id">Username:</label>
+        <input type="text" id="login_id" name="login_id" required><br>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br>
+
+        <button type="button" onclick="authenticate()">Login</button>
+    </form>
+</section>
+
+<!-- Customer List Screen -->
+<section id="customerListScreen" style="display: none;">
+    <h2>Customer List</h2>
+    <table border="1" id="customerTable">
+        <thead>
+            <tr>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody id="customerTableBody">
+            <!-- Customer data will be dynamically populated here -->
+        </tbody>
+    </table>
+
+    <button onclick="showAddCustomerScreen()">Add New Customer</button>
+</section>
+
+<!-- Add New Customer Screen -->
+<section id="addCustomerScreen" style="display: none;">
+    <h2>Add New Customer</h2>
+    <form id="addCustomerForm">
+        <label for="first_name">First Name:</label>
+        <input type="text" id="first_name" name="first_name" required><br>
+
+        <label for="last_name">Last Name:</label>
+        <input type="text" id="last_name" name="last_name" required><br>
+
+        <!-- Add more input fields for other customer details -->
+
+        <button type="button" onclick="addCustomer()">Add Customer</button>
+    </form>
+
+    <button onclick="showCustomerListScreen()">Back to Customer List</button>
+</section>
+
+<script>
+    let bearerToken = '';
+
+    function authenticate() {
+        const login_id = document.getElementById('login_id').value;
+        const password = document.getElementById('password').value;
+
+        fetch('https://qa2.sunbasedata.com/sunbase/portal/api/assignment_auth.jsp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                login_id: login_id,
+                password: password,
+            }),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Invalid credentials');
+            }
+            return response.json();
+        })
+        .then(data => {
+            bearerToken = data.token;
+            showCustomerListScreen();
+            fetchCustomerList();
+        })
+        .catch(error => {
+            alert('Authentication failed. Please check your credentials.');
+        });
+    }
+
+    function fetchCustomerList() {
+        fetch('https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=get_customer_list', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${bearerToken}`,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayCustomerList(data);
+        })
+        .catch(error => {
+            console.error('Error fetching customer list:', error);
+        });
+    }
+
+    function displayCustomerList(customers) {
+        const tableBody = document.getElementById('customerTableBody');
+        tableBody.innerHTML = '';
+
+        customers.forEach(customer => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${customer.first_name}</td><td>${customer.last_name}</td><td>${customer.email}</td>`;
+            tableBody.appendChild(row);
+        });
+    }
+
+    function showAddCustomerScreen() {
+        document.getElementById('customerListScreen').style.display = 'none';
+        document.getElementById('addCustomerScreen').style.display = 'block';
+    }
+
+    function showCustomerListScreen() {
+        document.getElementById('addCustomerScreen').style.display = 'none';
+        document.getElementById('customerListScreen').style.display = 'block';
+        fetchCustomerList();
+    }
+
+    function addCustomer() {
+        const firstName = document.getElementById('first_name').value;
+        const lastName = document.getElementById('last_name').value;
+
+        fetch('https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${bearerToken}`,
+            },
+            body: JSON.stringify({
+                first_name: firstName,
+                last_name: lastName,
+                // Add more fields as needed
+            }),
+        })
+        .then(response => {
+            if (response.ok) {
+                alert('Customer created successfully.');
+                showCustomerListScreen();
+            } else {
+                throw new Error('Failed to create customer.');
+            }
+        })
+        .catch(error => {
+            console.error('Error creating customer:', error);
+        });
+    }
+</script>
+
+</body>
+</html>
